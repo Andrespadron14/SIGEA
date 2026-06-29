@@ -33,12 +33,12 @@ self.addEventListener('fetch', (e) => {
 
   if (u.origin === self.location.origin) {
     e.respondWith(
-      caches.match(r).then((c) => c || fetch(r).then((res) => { caches.open(CACHE).then((cache) => cache.put(r, res.clone())); return res; }))
+      caches.match(r).then((c) => c || fetch(r).then((res) => { const cl = res.clone(); caches.open(CACHE).then((cache) => cache.put(r, cl)); return res; }))
       .catch(() => caches.match('index.html'))
     );
   } else if (CDN.some((cdn) => r.url.startsWith(cdn) || r.url.includes(cdn))) {
     e.respondWith(
-      caches.match(r).then((c) => c || fetch(r).then((res) => { caches.open(CDN_CACHE).then((cache) => cache.put(r, res.clone())); return res; }))
+      caches.match(r).then((c) => c || fetch(r).then((res) => { const cl = res.clone(); caches.open(CDN_CACHE).then((cache) => cache.put(r, cl)); return res; }))
       .catch(() => new Response('', { status: 408 }))
     );
   }
