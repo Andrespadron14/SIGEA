@@ -633,7 +633,15 @@ App.Components.renderTable = ({ headers, rows, emptyMsg = 'No se encontraron reg
     return `<div class="table-container"><div class="table-empty"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg><p>${emptyMsg}</p></div></div>`;
   }
   const thead = headers.map(h => `<th>${h.label}</th>`).join('');
-  return `<div class="table-container"><table><thead><tr>${thead}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+  const processedRows = rows.map(rowHtml => {
+    let idx = 0;
+    return rowHtml.replace(/<td/g, () => {
+      const label = headers[idx]?.label || '';
+      idx++;
+      return `<td data-label="${label}"`;
+    });
+  });
+  return `<div class="table-container"><table><thead><tr>${thead}</tr></thead><tbody>${processedRows.join('')}</tbody></table></div>`;
 };
 
 /* ============================================================
