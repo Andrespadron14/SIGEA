@@ -54,12 +54,13 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input type="text" id="globalSearch" placeholder="Buscar..." autocomplete="off">
         </div>
-        <div class="user-info" id="userInfo">
-          <div class="user-avatar">CM</div>
+        <div class="user-info" id="userInfo" style="display:none">
+          <div class="user-avatar" id="userAvatar">CM</div>
           <div>
             <div class="user-name" id="userName">Carlos Mendoza</div>
             <div class="user-role" id="userRole">Administrador</div>
           </div>
+          <button class="btn btn-sm btn-ghost" id="logoutBtn" title="Cerrar sesión" style="display:none;color:var(--gray-400);padding:0"><i data-lucide="log-out" style="width:16px;height:16px"></i></button>
         </div>
       </div>
     </header>

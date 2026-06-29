@@ -12,7 +12,7 @@
     { "id": "par-003", "nombre": "Parroquia Sur", "municipio": "Guarenas" }
   ],
   "usuarios": [
-    { "id": "usr-001", "nombre": "Carlos Mendoza", "email": "admin@sigea.gob.ve", "rol": "administrador", "organismo": "Alcaldía del municipio Plaza", "telefono": "0412-1234567", "activo": true },
+    { "id": "usr-001", "nombre": "Carlos Mendoza", "email": "admin@sigea.gob.ve", "rol": "administrador", "organismo": "Alcaldía del municipio Plaza", "telefono": "0412-1234567", "password": "admin", "activo": true },
     { "id": "usr-002", "nombre": "María Rodríguez", "email": "maria@pc.gob.ve", "rol": "proteccion_civil", "organismo": "Protección Civil", "telefono": "0414-7654321", "activo": true },
     { "id": "usr-003", "nombre": "Pedro Jiménez", "email": "pedro@ingenieria.gob.ve", "rol": "ingeniero", "organismo": "Colegio de Ingenieros", "telefono": "0426-9876543", "activo": true },
     { "id": "usr-004", "nombre": "Ana López", "email": "ana@inspector.gob.ve", "rol": "inspector", "organismo": "Ministerio de Infraestructura", "telefono": "0416-5554433", "activo": true },

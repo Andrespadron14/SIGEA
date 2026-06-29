@@ -80,6 +80,113 @@ App.Config = {
 };
 
 /* ============================================================
+   SESSION / AUTH
+   ============================================================ */
+App.Session = {
+  user: null,
+
+  init() {
+    try {
+      const saved = localStorage.getItem('sigea_session');
+      if (saved) this.user = JSON.parse(saved);
+    } catch (e) { this.user = null; }
+    this._updateUI();
+  },
+
+  async login(email, password) {
+    const usuarios = await App.DB.getAll('usuarios');
+    const user = usuarios.find(u => (u.email === email || u.nombre.toLowerCase() === email.toLowerCase()) && u.password === password && u.activo !== false);
+    if (!user) return false;
+    this.user = user;
+    localStorage.setItem('sigea_session', JSON.stringify(user));
+    this._updateUI();
+    return true;
+  },
+
+  logout() {
+    this.user = null;
+    localStorage.removeItem('sigea_session');
+    this._updateUI();
+    const loginOverlay = document.getElementById('loginOverlay');
+    if (loginOverlay) loginOverlay.style.display = 'flex';
+    App.Router.navigate('#dashboard');
+  },
+
+  isLoggedIn() { return !!this.user; },
+  isAdmin() { return this.user?.rol === 'administrador'; },
+  hasRole(role) { return this.user?.rol === role; },
+  requireAdmin() {
+    if (!this.isAdmin()) { App.Utils.toast('Solo un administrador puede realizar esta acción', 'error'); return false; }
+    return true;
+  },
+
+  _updateUI() {
+    const el = document.getElementById('userInfo');
+    if (!el) return;
+    if (this.user) {
+      const initials = this.user.nombre.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+      document.getElementById('userAvatar').textContent = initials;
+      document.getElementById('userName').textContent = this.user.nombre;
+      document.getElementById('userRole').textContent = App.Utils.getRolLabel(this.user.rol);
+      document.getElementById('logoutBtn').style.display = '';
+      el.style.display = '';
+    } else {
+      document.getElementById('userAvatar').textContent = '?';
+      document.getElementById('userName').textContent = 'Sin sesión';
+      document.getElementById('userRole').textContent = 'Solo lectura';
+      document.getElementById('logoutBtn').style.display = 'none';
+    }
+  },
+
+  showLogin() {
+    const existing = document.getElementById('loginOverlay');
+    if (existing) { existing.style.display = 'flex'; return; }
+
+    const overlay = document.createElement('div');
+    overlay.id = 'loginOverlay';
+    overlay.innerHTML = `
+      <div class="login-overlay">
+        <div class="login-card">
+          <div class="login-logo">SG</div>
+          <h2>SIGEA</h2>
+          <p style="color:var(--gray-400);font-size:.82rem;margin-bottom:1.25rem;text-align:center">Sistema de Gestión de Edificaciones Afectadas</p>
+          <form id="loginForm">
+            <div class="form-group">
+              <label>Email o Nombre de usuario</label>
+              <input class="form-input" id="loginEmail" type="text" placeholder="admin@sigea.gob.ve" autocomplete="username" required>
+            </div>
+            <div class="form-group">
+              <label>Contraseña</label>
+              <input class="form-input" id="loginPassword" type="password" placeholder="••••••" autocomplete="current-password" required>
+            </div>
+            <p id="loginError" style="color:var(--danger);font-size:.75rem;display:none;margin-bottom:.5rem">Credenciales incorrectas</p>
+            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:.6rem" id="loginBtn">Ingresar</button>
+            <p style="text-align:center;font-size:.7rem;color:var(--gray-400);margin-top:.75rem">Usuario: admin@sigea.gob.ve / Contraseña: admin</p>
+          </form>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('loginBtn');
+      btn.disabled = true; btn.textContent = 'Ingresando...';
+      const ok = await App.Session.login(
+        document.getElementById('loginEmail').value.trim(),
+        document.getElementById('loginPassword').value
+      );
+      if (ok) {
+        overlay.style.display = 'none';
+        App.Router.navigate('#dashboard');
+      } else {
+        document.getElementById('loginError').style.display = '';
+        btn.disabled = false; btn.textContent = 'Ingresar';
+      }
+    });
+  }
+};
+
+/* ============================================================
    UTILS
    ============================================================ */
 App.Utils = {
@@ -291,7 +398,7 @@ App.DB = {
 
   _defaultSeed() {
     return {
-      usuarios: [{ id: 'usr-001', nombre: 'Carlos Mendoza', email: 'admin@sigea.gob.ve', rol: 'administrador', organismo: 'Alcaldía municipio Plaza', telefono: '0412-1234567', activo: true }],
+      usuarios: [{ id: 'usr-001', nombre: 'Carlos Mendoza', email: 'admin@sigea.gob.ve', rol: 'administrador', organismo: 'Alcaldía municipio Plaza', telefono: '0412-1234567', password: 'admin', activo: true }],
       urbanizaciones: [{ id: 'urb-001', nombre: 'La California', sector: 'Norte', municipio: 'Guarenas' },{ id: 'urb-002', nombre: 'Los Dos Caminos', sector: 'Centro', municipio: 'Guarenas' }],
       sectores: ['Norte','Centro','Sur'],
       municipios: [{ id: 'mun-001', nombre: 'Guarenas', estado: 'Miranda' }],
@@ -502,11 +609,21 @@ App.Router = {
     window.location.hash = hash;
   },
 
+  _adminRoutes: ['administracion', 'import-export'],
+
   async handleRoute() {
     const hash = window.location.hash || '#dashboard';
     const [path, ...params] = hash.substring(1).split('/');
     const pageContainer = document.getElementById('page-content');
     if (!pageContainer) return;
+
+    if (this._adminRoutes.includes(path) && !App.Session.isAdmin()) {
+      pageContainer.innerHTML = '<div class="table-empty" style="padding:3rem"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><p style="margin-top:.5rem">Acceso restringido</p><p style="font-size:.8rem;color:var(--gray-400)">Solo un administrador puede acceder a esta sección</p></div>';
+      this.updateSidebar(path);
+      this.updateHeader(path);
+      return;
+    }
+
     pageContainer.innerHTML = '<div class="loading-spinner"></div>';
 
     const handler = this.routes[path];
@@ -769,10 +886,13 @@ App.Views.Estructuras = {
     const estructuras = await App.DB.getAll('estructuras');
     container.innerHTML = `
       <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem">
-        <div>
-          <h1>Estructuras Registradas</h1>
-          <p>Total: ${estructuras.length} estructuras en el inventario</p>
+        <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+          <div><h1>Estructuras</h1><p>Gestión de edificaciones afectadas</p></div>
         </div>
+        <div style="display:flex;gap:.5rem">
+          ${App.Session.isAdmin() ? '<button class="btn btn-primary" id="btnNuevaEstructura"><i data-lucide="plus" style="width:16px;height:16px"></i> Nueva</button>' : ''}
+        </div>
+      </div>
         <div>
           <button class="btn btn-primary" id="btnNuevaEstructura"><i data-lucide="plus" style="width:16px;height:16px"></i> Nueva Estructura</button>
         </div>
@@ -835,8 +955,8 @@ App.Views.Estructuras = {
         <td>${App.Utils.formatDate(e.ultima_inspeccion)}</td>
         <td>
           <button class="btn btn-sm btn-ghost" data-action="view" data-id="${e.id}"><i data-lucide="eye" style="width:14px;height:14px"></i></button>
-          <button class="btn btn-sm btn-ghost" data-action="edit" data-id="${e.id}"><i data-lucide="edit" style="width:14px;height:14px"></i></button>
-          <button class="btn btn-sm btn-ghost" style="color:#EF4444" data-action="delete" data-id="${e.id}"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
+          ${App.Session.isAdmin() ? `<button class="btn btn-sm btn-ghost" data-action="edit" data-id="${e.id}"><i data-lucide="edit" style="width:14px;height:14px"></i></button>
+          <button class="btn btn-sm btn-ghost" style="color:#EF4444" data-action="delete" data-id="${e.id}"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>` : ''}
         </td>
       </tr>`).join('');
 
@@ -859,6 +979,7 @@ App.Views.Estructuras = {
     container.querySelectorAll('[data-action="delete"]').forEach(async (btn) => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
+        if (!App.Session.requireAdmin()) return;
         const ok = await App.Utils.confirmDialog('¿Eliminar esta estructura y todos sus datos asociados?');
         if (ok) {
           await App.DB.delete('estructuras', btn.dataset.id);
@@ -968,6 +1089,7 @@ App.Views.Estructuras = {
 
     document.getElementById('estForm')?.addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (!App.Session.requireAdmin()) return;
       const fd = new FormData(e.target);
       const data = {};
       fd.forEach((v, k) => { data[k] = v; });
@@ -1066,7 +1188,11 @@ App.Views.Estructuras = {
       const id = tab.dataset.tab;
       document.getElementById('tab' + id.charAt(0).toUpperCase() + id.slice(1))?.classList.add('active');
     });
-    document.getElementById('btnEditEst')?.addEventListener('click', () => App.Views.Estructuras.renderForm(id));
+    const editBtn = document.getElementById('btnEditEst');
+    if (editBtn) {
+      if (!App.Session.isAdmin()) { editBtn.style.display = 'none'; }
+      else { editBtn.addEventListener('click', () => App.Views.Estructuras.renderForm(id)); }
+    }
 
     // Photo gallery: toggle upload form
     document.getElementById('btnShowUploadForm')?.addEventListener('click', () => {
@@ -1464,6 +1590,7 @@ App.Views.Seguimiento = {
       footer: `<button class="btn btn-secondary" data-modal-close>Cancelar</button><button class="btn btn-primary" id="btnSaveSeg">Guardar</button>`
     });
     document.getElementById('btnSaveSeg')?.addEventListener('click', async () => {
+      if (!App.Session.requireAdmin()) return;
       const fd = new FormData(document.getElementById('segForm'));
       const data = {};
       fd.forEach((v, k) => data[k] = v);
@@ -1560,6 +1687,7 @@ App.Views.Inspecciones = {
       footer: `<button class="btn btn-secondary" data-modal-close>Cancelar</button><button class="btn btn-primary" id="btnSaveIns">Guardar Inspección</button>`
     });
     document.getElementById('btnSaveIns')?.addEventListener('click', async () => {
+      if (!App.Session.requireAdmin()) return;
       const fd = new FormData(document.getElementById('insForm'));
       const data = {};
       fd.forEach((v, k) => { if (k !== 'documentos') data[k] = v; });
@@ -1660,6 +1788,7 @@ App.Views.Servicios = {
       footer: `<button class="btn btn-secondary" data-modal-close>Cancelar</button><button class="btn btn-primary" id="btnSaveSrv">Guardar</button>`
     });
     document.getElementById('btnSaveSrv')?.addEventListener('click', async () => {
+      if (!App.Session.requireAdmin()) return;
       const fd = new FormData(document.getElementById('srvForm'));
       const data = { id: App.Utils.generateId('SRV'), fecha_actualizacion: App.Utils.now() };
       fd.forEach((v, k) => data[k] = v);
@@ -1821,16 +1950,18 @@ App.Views.Admin = {
               <div class="form-group"><label>Organismo</label><input class="form-input" name="organismo" value="${App.Utils.escapeHtml(editData?.organismo || '')}"></div>
             </div>
             <div class="form-group"><label>Teléfono</label><input class="form-input" name="telefono" value="${App.Utils.escapeHtml(editData?.telefono || '')}"></div>
+            <div class="form-group"><label>Contraseña ${editData ? '(dejar vacío para mantener)' : '*'}</label><input class="form-input" name="password" type="password" value="" ${editData ? '' : 'required'}></div>
             <div class="form-group"><label><input type="checkbox" name="activo" value="true" ${editData?.activo !== false ? 'checked' : ''}> Usuario activo</label></div>
           </form>`,
         footer: `<button class="btn btn-secondary" data-modal-close>Cancelar</button><button class="btn btn-primary" id="btnSaveUser">${editData ? 'Actualizar' : 'Crear'}</button>`
       });
       document.getElementById('btnSaveUser')?.addEventListener('click', async () => {
+        if (!App.Session.requireAdmin()) return;
         const fd = new FormData(document.getElementById('userForm'));
         const data = {};
         fd.forEach((v, k) => { if (k === 'activo') data[k] = true; else data[k] = v; });
         if (editData) { data.id = editData.id; await App.DB.update('usuarios', data); }
-        else { data.id = App.Utils.generateId('USR'); data.activo = data.activo !== false; await App.DB.create('usuarios', data); }
+        else { if (!data.password) { App.Utils.toast('Debe asignar una contraseña', 'warning'); return; } data.id = App.Utils.generateId('USR'); data.activo = data.activo !== false; await App.DB.create('usuarios', data); }
         App.Components.Modal.close();
         App.Utils.toast(`Usuario ${editData ? 'actualizado' : 'creado'}`, 'success');
         this.render();
@@ -2184,7 +2315,12 @@ App.init = async function() {
     return;
   }
   App.Components.renderSidebar();
+  App.Session.init();
   App.Router.start();
+
+  if (!App.Session.isLoggedIn()) {
+    App.Session.showLogin();
+  }
 
   document.getElementById('menuToggle')?.addEventListener('click', () => {
     document.getElementById('sidebar')?.classList.toggle('open');
@@ -2194,6 +2330,9 @@ App.init = async function() {
     if (item && window.innerWidth <= 768) {
       document.getElementById('sidebar')?.classList.remove('open');
     }
+  });
+  document.getElementById('logoutBtn')?.addEventListener('click', () => {
+    App.Session.logout();
   });
   document.getElementById('globalSearch')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.value.trim()) {
