@@ -7,7 +7,7 @@ const App = {};
 App.Config = {
   version: '1.0.0',
   dbName: 'SIGEADB',
-  dbVersion: 1,
+  dbVersion: 2,
   stores: ['estructuras','inspecciones','seguimientos','fotografias','servicios','usuarios','referencias'],
   cloud: {
     get supabaseUrl() { return localStorage.getItem('sigea_supabase_url') || ''; },
@@ -220,10 +220,10 @@ App.DB = {
     try {
       this.db = await this._openDB();
       this.ready = true;
-      const seeded = localStorage.getItem('sigea_seeded');
+      const seeded = localStorage.getItem('sigea_seeded_v2');
       if (!seeded) {
         await this._loadSeedData();
-        localStorage.setItem('sigea_seeded', 'true');
+        localStorage.setItem('sigea_seeded_v2', 'true');
       }
       return true;
     } catch (e) {
