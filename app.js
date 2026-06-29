@@ -7,7 +7,7 @@ const App = {};
 App.Config = {
   version: '1.0.0',
   dbName: 'SIGEADB',
-  dbVersion: 2,
+  dbVersion: 3,
   stores: ['estructuras','inspecciones','seguimientos','fotografias','servicios','usuarios','referencias'],
   cloud: {
     get supabaseUrl() { return localStorage.getItem('sigea_supabase_url') || ''; },
@@ -327,10 +327,10 @@ App.DB = {
     try {
       this.db = await this._openDB();
       this.ready = true;
-      const seeded = localStorage.getItem('sigea_seeded_v2');
+      const seeded = localStorage.getItem('sigea_seeded_v3');
       if (!seeded) {
         await this._loadSeedData();
-        localStorage.setItem('sigea_seeded_v2', 'true');
+        localStorage.setItem('sigea_seeded_v3', 'true');
       }
       return true;
     } catch (e) {
@@ -363,7 +363,7 @@ App.DB = {
         if (resp.ok) seedData = await resp.json();
       } catch (e) { /* ignore */ }
       if (!seedData) seedData = this._defaultSeed();
-      const stores = ['urbanizaciones','sectores','municipios','parroquias','usuarios','estructuras','inspecciones','seguimientos','fotografias','servicios'];
+      const stores = ['urbanizaciones','sectores','municipios','parroquias','estructuras','inspecciones','seguimientos','fotografias','servicios'];
       for (const key of stores) {
         if (seedData[key] && seedData[key].length) {
           const tx = this.db.transaction('referencias', 'readwrite');
@@ -371,6 +371,11 @@ App.DB = {
           const existing = await new Promise(r => { const q = store.get(key); q.onsuccess = () => r(q.result); });
           if (!existing) store.put({ id: key, data: seedData[key] });
           await new Promise(r => { tx.oncomplete = r; });
+        }
+      }
+      if (seedData.usuarios) {
+        for (const u of seedData.usuarios) {
+          await this.create('usuarios', u);
         }
       }
       if (seedData.estructuras) {
