@@ -11,5 +11,7 @@ desktop.ini
 
 # Node
 node_modules/
+tailwind.config.js
+src/
 
 .vercel
