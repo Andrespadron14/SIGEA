@@ -94,7 +94,14 @@ App.Session = {
   },
 
   async login(email, password) {
-    const usuarios = await App.DB.getAll('usuarios');
+    let usuarios = await App.DB.getAll('usuarios');
+    if (!usuarios.length) {
+      const seed = App.DB._defaultSeed();
+      for (const u of seed.usuarios) {
+        await App.DB.create('usuarios', u);
+      }
+      usuarios = seed.usuarios;
+    }
     const user = usuarios.find(u => (u.email === email || u.nombre.toLowerCase() === email.toLowerCase()) && u.password === password && u.activo !== false);
     if (!user) return false;
     this.user = user;
