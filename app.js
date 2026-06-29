@@ -2181,6 +2181,12 @@ App.init = async function() {
   document.getElementById('menuToggle')?.addEventListener('click', () => {
     document.getElementById('sidebar')?.classList.toggle('open');
   });
+  document.getElementById('sidebar-nav')?.addEventListener('click', (e) => {
+    const item = e.target.closest('.nav-item');
+    if (item && window.innerWidth <= 768) {
+      document.getElementById('sidebar')?.classList.remove('open');
+    }
+  });
   document.getElementById('globalSearch')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.value.trim()) {
       App.Router.navigate('#buscador');
