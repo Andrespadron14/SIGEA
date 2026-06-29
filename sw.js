@@ -1,6 +1,6 @@
-const CACHE = 'sigea-v1';
+const CACHE = 'sigea-v2';
 const ASSETS = ['.', 'index.html', 'style.css', 'app.js', 'database.json', 'manifest.json', 'icons/icon-192.svg', 'icons/icon-512.svg'];
-const CDN_CACHE = 'sigea-cdn-v1';
+const CDN_CACHE = 'sigea-cdn-v2';
 const CDN = [
   'https://cdn.tailwindcss.com',
   'https://cdn.jsdelivr.net/npm/chart.js',
@@ -10,7 +10,7 @@ const CDN = [
   'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
   'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js',
-  'https://cdn.jsdelivr.net/npm/lucide-icons@0.263.1/dist/umd/lucide.min.js'
+  'https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js'
 ];
 
 self.addEventListener('install', (e) => {
